@@ -1,0 +1,20 @@
+{
+  "dart.flutterSdkPath": ".fvm/versions/3.41.1",
+  "dart.enableSdkFormatter": true,
+  "dart.showTodos": true,
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "dart.analysisExcludedFolders": [
+    "build",
+    ".dart_tool",
+    ".fvm",
+    "ios",
+    "android"
+  ],
+  "dart.analysisServer.enableSdkFormatter": true,
+  "dart.debugExternalLibraries": false,
+  "dart.debugSdkLibraries": false,
+  "dart.flutterShowStructuredErrors": true
+}
