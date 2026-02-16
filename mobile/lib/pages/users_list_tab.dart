@@ -10,6 +10,13 @@ class UsersListTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Add user',
+        onPressed: () {
+          // TODO(exercise): Open add user sheet / dialog / screen.
+        },
+        child: const Icon(Icons.person_add_alt_1),
+      ),
       appBar: AppBar(
         title: const Text('Users'),
         actions: [
