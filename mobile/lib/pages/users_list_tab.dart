@@ -1,11 +1,23 @@
+import 'package:dataqube/providers/users_provider.dart';
+import 'package:dataqube/widgets/add_user_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/users_provider.dart';
 import 'account_page.dart';
+
 
 class UsersListTab extends StatelessWidget {
   const UsersListTab({super.key});
+
+  Future<void> _openAddUserSheet(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return const AddUserSheet();
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +25,7 @@ class UsersListTab extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         tooltip: 'Add user',
         onPressed: () {
-          // TODO(exercise): Open add user sheet / dialog / screen.
+          _openAddUserSheet(context);
         },
         child: const Icon(Icons.person_add_alt_1),
       ),

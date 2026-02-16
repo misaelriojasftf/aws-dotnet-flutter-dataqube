@@ -58,8 +58,8 @@ class UsersProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addUser(UserEntity _) {
-    // TODO(exercise): Append the new user to `_users` and call notifyListeners().
-    // This method is intentionally left as exercise scaffolding for commit 4.
+  void addUser(UserEntity user) {
+    _users = [..._users, user];
+    notifyListeners();
   }
 }
