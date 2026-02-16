@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'api_test_tab.dart';
 import 'favorites_tab.dart';
 import 'users_list_tab.dart';
 
@@ -13,7 +14,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _currentTab = 0;
 
-  static const List<Widget> _tabs = [UsersListTab(), FavoritesTab()];
+  static const List<Widget> _tabs = [
+    UsersListTab(),
+    FavoritesTab(),
+    ApiTestTab(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +40,7 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.favorite_border),
             label: 'Favs',
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.api), label: 'Test'),
         ],
       ),
     );
