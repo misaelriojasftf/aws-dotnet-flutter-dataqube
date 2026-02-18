@@ -4,10 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dataqube/models/user_entity.dart';
 import 'package:dataqube/providers/users_provider.dart';
 
+import 'test_users_repository.dart';
 
 void main() {
   test('addUser appends user and notifies filtered list', () async {
-    final provider = UsersProvider();
+    final provider = UsersProvider(
+      usersRepository: TestUsersRepository(users: kTestUsers),
+    );
 
     debugPrint('🚀 Starting test: addUser');
 

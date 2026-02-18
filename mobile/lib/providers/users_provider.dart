@@ -1,9 +1,13 @@
 import 'package:flutter/foundation.dart';
 
-import '../data/mock_users.dart';
+import '../data/users_repository.dart';
 import '../models/user_entity.dart';
 
 class UsersProvider extends ChangeNotifier {
+  UsersProvider({required UsersRepository usersRepository})
+    : _usersRepository = usersRepository;
+
+  final UsersRepository _usersRepository;
   List<UserEntity> _users = const [];
   String _query = '';
   final Set<int> _favoriteIds = <int>{};
@@ -38,9 +42,7 @@ class UsersProvider extends ChangeNotifier {
   }
 
   Future<void> loadUsers() async {
-    // Session 1 keeps this local. A later commit can swap this to HTTP.
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    _users = loadMockUsers();
+    _users = await _usersRepository.getUsers();
     notifyListeners();
   }
 
