@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flutter: De Código a Píxel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --flutter-blue: #027DFD;
+            --flutter-cyan: #40D1FB;
+            --android-green: #3DDC84;
+            --apple-silver: #A2AAAD;
+            --bg-dark: #020617;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #f8fafc;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Contenedor principal de la cinta de flujo */
+        .pipeline-flow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            height: 400px;
+            padding: 0 5%;
+            position: relative;
+        }
+
+        /* Línea de conexión principal */
+        .main-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255,255,255,0.05);
+            z-index: 1;
+        }
+
+        /* El "Widget" que viaja */
+        .traveling-data {
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            width: 80px;
+            height: 80px;
+            background: var(--flutter-blue);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 10px;
+            z-index: 50;
+            transform: translateY(-50%);
+            box-shadow: 0 0 30px var(--flutter-blue);
+            transition: all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        /* Animación de Binario 0/1 */
+        .binary-stream {
+            position: absolute;
+            font-family: monospace;
+            font-size: 10px;
+            color: var(--flutter-cyan);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        @keyframes shoot-binary {
+            0% { transform: translate(0, 0); opacity: 1; }
+            100% { transform: translate(100px, 20px); opacity: 0; }
+        }
+
+        /* Estilos de los Nodos */
+        .node {
+            width: 140px;
+            text-align: center;
+            z-index: 10;
+            position: relative;
+        }
+
+        .node-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 15px;
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .active-node .node-icon {
+            border-color: var(--flutter-cyan);
+            box-shadow: 0 0 20px rgba(64, 209, 251, 0.4);
+            background: #0f172a;
+        }
+
+        /* Dispositivos Finales */
+        .device {
+            width: 100px;
+            height: 180px;
+            border: 4px solid #334155;
+            border-radius: 15px;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .screen-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        /* Efecto de escaneo de renderizado */
+        .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: white;
+            box-shadow: 0 0 10px white;
+            display: none;
+        }
+
+        @keyframes scanning {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-6">
+
+    <div class="w-full max-w-6xl">
+        <header class="text-center mb-12">
+            <h1 class="text-3xl font-black italic tracking-tighter text-white">PIPELINE <span class="text-blue-500">REAL-TIME</span> FLUTTER</h1>
+            <p class="text-slate-500 text-sm">Visualización del flujo: Código → Binario → Arquitectura → Hardware</p>
+        </header>
+
+        <!-- Área de Código de Inicio -->
+        <div class="flex justify-center mb-8">
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 font-mono text-xs w-64 shadow-2xl">
+                <div class="flex gap-1.5 mb-2">
+                    <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                    <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+                    <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                </div>
+                <span class="text-purple-400">return</span> <span class="text-blue-400">Text</span>(<br>
+                &nbsp;&nbsp;<span class="text-green-400">"¡Hola!"</span>,<br>
+                &nbsp;&nbsp;style: <span class="text-blue-400">TextStyle</span>(...)<br>
+                );
+            </div>
+        </div>
+
+        <div class="pipeline-flow mb-20">
+            <div class="main-line"></div>
+            
+            <!-- El Widget Viajero -->
+            <div id="data-traveler" class="traveling-data">TEXT()</div>
+
+            <!-- Paso 1: Framework -->
+            <div id="node-1" class="node">
+                <div class="node-icon">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                </div>
+                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Framework</span>
+            </div>
+
+            <!-- Paso 2: Engine C++ -->
+            <div id="node-2" class="node">
+                <div class="node-icon">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                </div>
+                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Engine C++</span>
+            </div>
+
+            <!-- Paso 3: Impeller -->
+            <div id="node-3" class="node">
+                <div class="node-icon">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Impeller GPU</span>
+            </div>
+
+            <!-- Dispositivos -->
+            <div class="flex gap-8">
+                <!-- iOS -->
+                <div class="flex flex-col items-center">
+                    <div class="device border-white/20">
+                        <div id="scan-ios" class="scanline"></div>
+                        <div id="screen-ios" class="screen-content bg-slate-900">
+                            <span class="text-blue-400 font-bold text-lg">¡Hola!</span>
+                        </div>
+                    </div>
+                    <span class="text-[9px] mt-2 font-bold text-white/50">iPhone (Metal)</span>
+                </div>
+                <!-- Android -->
+                <div class="flex flex-col items-center">
+                    <div class="device border-green-900/40">
+                        <div id="scan-android" class="scanline"></div>
+                        <div id="screen-android" class="screen-content bg-slate-900">
+                            <span class="text-green-400 font-bold text-lg">¡Hola!</span>
+                        </div>
+                    </div>
+                    <span class="text-[9px] mt-2 font-bold text-white/50">Android (Vulkan)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal de Logs -->
+        <div class="bg-black p-4 rounded-lg border border-slate-800 h-32 overflow-hidden font-mono text-[10px] text-green-500">
+            <div id="console-logs">
+                > Initializing Build Pipeline...<br>
+                > Dart VM: Compiling Text() to AOT...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const traveler = document.getElementById('data-traveler');
+        const logs = document.getElementById('console-logs');
+        const nodes = [
+            { id: 'node-1', pos: '5%', label: 'WIDGET', detail: 'Dart: Creando RenderObject...' },
+            { id: 'node-1', pos: '15%', label: 'ELEMENT', detail: '01001011 (Buffer AOT...)' },
+            { id: 'node-2', pos: '35%', label: 'ENGINE', detail: 'C++: Recibiendo DisplayList...' },
+            { id: 'node-3', pos: '55%', label: 'GPU', detail: 'Rasterizando en Shaders...' },
+            { id: 'screen-final', pos: '85%', label: 'RENDER', detail: 'Frame presentado.' }
+        ];
+
+        let currentStep = 0;
+
+        function addLog(msg) {
+            logs.innerHTML += `<br>> ${msg}`;
+            if (logs.children.length > 8) logs.innerHTML = logs.innerHTML.split('<br>').slice(1).join('<br>');
+        }
+
+        function spawnBinary(x, y) {
+            const b = document.createElement('div');
+            b.className = 'binary-stream';
+            b.innerText = Math.round(Math.random());
+            b.style.left = x + 'px';
+            b.style.top = y + 'px';
+            b.style.animation = 'shoot-binary 1s forwards';
+            document.body.appendChild(b);
+            setTimeout(() => b.remove(), 1000);
+        }
+
+        function runPipeline() {
+            const step = nodes[currentStep];
+            
+            // Mover el widget
+            traveler.style.left = step.pos;
+            traveler.innerText = step.label;
+
+            // Iluminar nodo
+            document.querySelectorAll('.node').forEach(n => n.classList.remove('active-node'));
+            if(step.id !== 'screen-final') {
+                document.getElementById(step.id).classList.add('active-node');
+            }
+
+            // Efecto binario
+            const rect = traveler.getBoundingClientRect();
+            for(let i=0; i<5; i++) spawnBinary(rect.left, rect.top);
+
+            addLog(step.detail);
+
+            // Final del flujo
+            if (currentStep === nodes.length - 1) {
+                // Mostrar pantallas
+                document.getElementById('screen-ios').style.opacity = '1';
+                document.getElementById('screen-android').style.opacity = '1';
+                document.getElementById('scan-ios').style.display = 'block';
+                document.getElementById('scan-android').style.display = 'block';
+                document.getElementById('scan-ios').style.animation = 'scanning 1s ease-in-out';
+                document.getElementById('scan-android').style.animation = 'scanning 1s ease-in-out';
+
+                setTimeout(() => {
+                    // Reiniciar ciclo
+                    currentStep = 0;
+                    document.getElementById('screen-ios').style.opacity = '0';
+                    document.getElementById('screen-android').style.opacity = '0';
+                    document.getElementById('scan-ios').style.display = 'none';
+                    document.getElementById('scan-android').style.display = 'none';
+                    runPipeline();
+                }, 3000);
+            } else {
+                currentStep++;
+                setTimeout(runPipeline, 1500);
+            }
+        }
+
+        // Iniciar después de cargar
+        window.onload = () => {
+            setTimeout(runPipeline, 1000);
+        };
+    </script>
+</body>
+</html>
