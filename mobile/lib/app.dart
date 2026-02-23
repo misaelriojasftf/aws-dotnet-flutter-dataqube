@@ -1,4 +1,4 @@
-import 'package:dataqube/features/auth/presentation/auth_gate.dart';
+import 'package:dataqube/features/auth/presentation/auth_wrapper.dart';
 import 'package:flutter/material.dart';
 
 class MyApp extends StatelessWidget {
@@ -12,7 +12,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
       ),
-      home: const AuthGate(),
+      home: const AuthWrapper(),
     );
   }
 }

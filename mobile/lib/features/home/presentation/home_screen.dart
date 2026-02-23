@@ -1,5 +1,4 @@
-import 'dart:convert';
-
+import 'package:dataqube/core/utils/jwt_utils.dart';
 import 'package:dataqube/features/auth/domain/auth_session.dart';
 import 'package:flutter/material.dart';
 
@@ -15,23 +14,9 @@ class HomeScreen extends StatelessWidget {
   final VoidCallback onLogoutPressed;
   final String? error;
 
-  String? _extractEmail(String idToken) {
-    try {
-      final parts = idToken.split('.');
-      if (parts.length < 2) return null;
-      final payload =
-          utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
-      final map = jsonDecode(payload) as Map<String, dynamic>;
-      final email = map['email'];
-      return email is String ? email : null;
-    } catch (_) {
-      return null;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final email = _extractEmail(session.idToken);
+    final email = JwtUtils.extractEmail(session.idToken);
     final tokenPreview = session.accessToken.length > 24
         ? '${session.accessToken.substring(0, 24)}...'
         : session.accessToken;

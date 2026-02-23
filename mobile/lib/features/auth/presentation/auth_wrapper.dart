@@ -1,18 +1,18 @@
 import 'package:dataqube/features/auth/data/auth_service.dart';
 import 'package:dataqube/features/auth/domain/auth_session.dart';
-import 'package:dataqube/features/auth/presentation/screens/home_screen.dart';
-import 'package:dataqube/features/auth/presentation/screens/login_screen.dart';
+import 'package:dataqube/features/home/presentation/home_screen.dart';
+import 'package:dataqube/features/auth/presentation/login_screen.dart';
 import 'package:flutter/material.dart';
 
-class AuthGate extends StatefulWidget {
-  const AuthGate({super.key});
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
 
   @override
-  State<AuthGate> createState() => _AuthGateState();
+  State<AuthWrapper> createState() => _AuthWrapperState();
 }
 
-class _AuthGateState extends State<AuthGate> {
-  final _authService = AuthService();
+class _AuthWrapperState extends State<AuthWrapper> {
+  final AuthService _authService = CognitoAuthService();
 
   AuthSession? _session;
   String? _error;
