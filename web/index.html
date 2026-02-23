@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AWS Cognito Login</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 420px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+
+      form, .card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+
+      input, button {
+        width: 100%;
+        margin-top: 8px;
+        padding: 10px;
+        box-sizing: border-box;
+      }
+
+      #status {
+        font-size: 14px;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Login Cognito URL</h1>
+
+    <div class="card">
+      <button id="login-btn" type="button">Login con Cognito</button>
+    </div>
+
+    <div class="card">
+      <button id="logout-btn" type="button">Logout</button>
+      <p id="status">Estado: revisando sesion...</p>
+    </div>
+
+    <script src="./cognito-config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
