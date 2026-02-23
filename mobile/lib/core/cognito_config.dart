@@ -2,6 +2,8 @@ class CognitoConfig {
   const CognitoConfig._();
 
   static const region = 'us-east-2';
+
+  // TODO: Replace with your Cognito user pool ID.
   static const userPoolId = 'us-east-2_1cNEVfoNm';
 
   // TODO: Replace with your Cognito app client ID.
