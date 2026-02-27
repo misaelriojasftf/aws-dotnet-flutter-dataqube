@@ -17,6 +17,9 @@ class AwsConstants {
 }
 ''';
 
-  static const lambdaApiName = 'dataqubeApi';
+  static const lambdaApiName = 'dataqubeApi2';
   static const lambdaPath = '/hello';
+
+  /// TODO: Add new endpoint path
+  // static const lambdaPath2 = '/hello2';
 }

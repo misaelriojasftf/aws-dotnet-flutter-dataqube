@@ -10,4 +10,7 @@ class LambdaRepository {
     final rawBody = await _lambdaService.invokeHelloLambda();
     return LambdaResponse.fromRaw(rawBody);
   }
+
+  /// TODO: Add one more method 
+  /// 
 }

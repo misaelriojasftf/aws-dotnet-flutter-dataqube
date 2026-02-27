@@ -23,10 +23,15 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        /// Services
         Provider(create: (_) => LambdaService()),
+
+        /// Repositories
         ProxyProvider<LambdaService, LambdaRepository>(
           update: (_, lambdaService, __) => LambdaRepository(lambdaService),
         ),
+
+        /// ViewModels
         ChangeNotifierProxyProvider<LambdaRepository, HomeViewModel>(
           create: (context) => HomeViewModel(context.read<LambdaRepository>()),
           update: (_, lambdaRepository, viewModel) =>

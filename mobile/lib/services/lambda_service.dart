@@ -11,4 +11,15 @@ class LambdaService {
 
     return response.decodeBody();
   }
+
+  /// TODO: Implement new endpoint
+  Future<String> invokeNewLambda() async {
+    // final response = await Amplify.API.get(
+    //   AwsConstants.lambdaPath2,
+    //   apiName: AwsConstants.lambdaApiName,
+    // ).response;
+
+    // return response.decodeBody();
+    return '';
+  }
 }
