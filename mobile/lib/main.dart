@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
       providers: [
         Provider(create: (_) => LambdaService()),
         ProxyProvider<LambdaService, LambdaRepository>(
-          update: (_, lambdaService, __) => LambdaRepository(lambdaService),
+          update: (_, lambdaService, _) => LambdaRepository(lambdaService),
         ),
         ChangeNotifierProxyProvider<LambdaRepository, HomeViewModel>(
           create: (context) => HomeViewModel(context.read<LambdaRepository>()),
