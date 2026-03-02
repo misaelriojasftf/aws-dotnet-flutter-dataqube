@@ -1,0 +1,39 @@
+name: Flutter CI (basic)
+
+on:
+  push:
+    branches: ["main", "develop"]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/flutter-ci-basic.yml"
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/flutter-ci-basic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-ci:
+    runs-on: ubuntu-latest
+    env:
+      FLUTTER_PROJECT_DIR: mobile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter Pub Get
+        working-directory: ${{ env.FLUTTER_PROJECT_DIR }}
+        run: flutter pub get
+
+      - name: Flutter Analyze
+        working-directory: ${{ env.FLUTTER_PROJECT_DIR }}
+        run: flutter analyze
