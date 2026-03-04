@@ -14,6 +14,9 @@ public class Function
     {
         var requestId = GetRequestId(request, context);
 
+        /// TODO: Create a validation for new HEADER KEY
+        /// 
+        
         if (string.IsNullOrWhiteSpace(request.Body))
         {
             return Task.FromResult(BadRequest("Body is required", requestId));
@@ -22,7 +25,9 @@ public class Function
         CreateAdjustmentRequest? body;
 
         try
-        {
+        {   
+            /// TODO: UPDATE THIS TO HANDLE ANOTHER MODEL
+            /// 
             body = JsonSerializer.Deserialize<CreateAdjustmentRequest>(
                 request.Body,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
@@ -37,7 +42,9 @@ public class Function
         {
             return Task.FromResult(BadRequest("Invalid payload", requestId));
         }
-
+        
+        /// TODO: CHANGE THIS TO FOLLOW THE NEW MODEL 
+        /// 
         if (string.IsNullOrWhiteSpace(body.StoreId) ||
             string.IsNullOrWhiteSpace(body.Sku))
         {
@@ -52,9 +59,11 @@ public class Function
             deltaQty = body.DeltaQty
         }));
 
+        // {success: true}
         return Task.FromResult(Json(201, new { success = true }, requestId));
     }
 
+    /// Request ID Extraction Helper
     private static string GetRequestId(
         APIGatewayProxyRequest request,
         ILambdaContext context)
@@ -73,8 +82,9 @@ public class Function
         return context.AwsRequestId;
     }
 
+    /// Get Value from Headers Helper
     private static bool TryGetHeaderValue(
-        IDictionary<string, string> headers,
+        IDictionary<string, string> headers, 
         string headerName,
         out string value)
     {
@@ -96,12 +106,26 @@ public class Function
         return false;
     }
 
+    /// Bad Request Helper
+
     private static APIGatewayProxyResponse BadRequest(
         string message,
         string requestId)
     {
         return Json(400, new ApiError("VALIDATION", message), requestId);
     }
+
+    /// TODO: CREATE ANOTHER BAD REQUEST HELPER TYPE
+    /// 
+    /// 
+    // private static APIGatewayProxyResponse UserAccesDenied(
+    //     string message,
+    //     string requestId)
+    // {
+    //     return Json(400, new ApiError("----", message), requestId);
+    // }
+
+    /// Json Response Helper
 
     private static APIGatewayProxyResponse Json(
         int statusCode,
@@ -121,9 +145,12 @@ public class Function
     }
 }
 
+
+// Basic Models
+
+/// TODO: UPDATE THIS MODEL WITH YOUR OWN MODEL 
 public record CreateAdjustmentRequest(
     string StoreId,
-    string Sku,
     int DeltaQty,
     string? Reason,
     string? PhotoKey
