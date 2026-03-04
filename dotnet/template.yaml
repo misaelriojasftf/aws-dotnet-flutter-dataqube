@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Adjustments Lambda HTTP API (.NET 8)
+
+Resources:
+  AdjustmentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: adjustments-lambda
+      Runtime: dotnet8
+      MemorySize: 512
+      Timeout: 10
+      Handler: AdjustmentsLambda::AdjustmentsLambda.Function::FunctionHandler
+      CodeUri: src/AdjustmentsLambda/
+      Events:
+        AdjustmentsPost:
+          Type: HttpApi
+          Properties:
+            Path: /adjustments
+            Method: POST
+
+Outputs:
+  HttpApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/adjustments"
