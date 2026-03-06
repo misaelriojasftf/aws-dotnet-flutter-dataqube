@@ -15,7 +15,6 @@ public class Function
         var requestId = GetRequestId(request, context);
 
         /// TODO: Create a validation for new HEADER KEY
-        /// 
         
         if (string.IsNullOrWhiteSpace(request.Body))
         {
@@ -88,7 +87,7 @@ public class Function
         string headerName,
         out string value)
     {
-        if (headers.TryGetValue(headerName, out value))
+        if (headers.TryGetValue(headerName, out value!))
         {
             return true;
         }
@@ -148,12 +147,16 @@ public class Function
 
 // Basic Models
 
-/// TODO: UPDATE THIS MODEL WITH YOUR OWN MODEL 
+/// TODO: UPDATE THIS MODEL WITH YOUR OWN MODEL
 public record CreateAdjustmentRequest(
     string StoreId,
     int DeltaQty,
     string? Reason,
     string? PhotoKey
-);
+)
+{
+    public string? Sku { get; internal set; }
+}
+
 
 public record ApiError(string Code, string Message);
