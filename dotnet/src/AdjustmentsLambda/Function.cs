@@ -155,6 +155,8 @@ public record CreateAdjustmentRequest(
     string? PhotoKey
 )
 {
+    // TODO: FIX THIS MODEL TO MATCH THE POST BODY
+    //
     public string? Sku { get; internal set; }
 }
 
