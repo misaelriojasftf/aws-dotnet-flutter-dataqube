@@ -2,16 +2,26 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Adjustments Lambda HTTP API (.NET 8)
 
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Deployment stage
+
 Resources:
   AdjustmentsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: adjustments-lambda
+      FunctionName: !Sub "adjustments-lambda-${Stage}"
       Runtime: dotnet8
       MemorySize: 512
       Timeout: 10
       Handler: AdjustmentsLambda::AdjustmentsLambda.Function::FunctionHandler
       CodeUri: src/AdjustmentsLambda/
+      AutoPublishAlias: !Ref Stage   # Automatically creates version and alias for the stage
       Events:
         AdjustmentsPost:
           Type: HttpApi
@@ -22,4 +32,7 @@ Resources:
 Outputs:
   HttpApiUrl:
     Description: API Gateway endpoint URL
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/adjustments"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}"
+  AdjustmentsFunctionArn:
+    Description: Lambda ARN with alias for the stage
+    Value: !GetAtt AdjustmentsFunction.Arn
