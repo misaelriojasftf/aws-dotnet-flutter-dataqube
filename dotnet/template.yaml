@@ -5,10 +5,11 @@ Description: Adjustments Lambda HTTP API (.NET 8)
 Parameters:
   Stage:
     Type: String
-    Default: dev
+    Default: stg
     AllowedValues:
       - dev
       - prod
+      - stg
     Description: Deployment stage
 
 Resources:
@@ -22,6 +23,11 @@ Resources:
       Handler: AdjustmentsLambda::AdjustmentsLambda.Function::FunctionHandler
       CodeUri: src/AdjustmentsLambda/
       AutoPublishAlias: !Ref Stage   # Automatically creates version and alias for the stage
+      Environment:
+        Variables:
+          METRICS_NAMESPACE: StockOps
+      Policies:
+        - CloudWatchPutMetricPolicy: {}
       Events:
         AdjustmentsPost:
           Type: HttpApi

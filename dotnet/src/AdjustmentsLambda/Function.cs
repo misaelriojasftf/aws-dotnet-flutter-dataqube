@@ -1,5 +1,10 @@
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
+using Amazon.CloudWatch;
+using AdjustmentsLambda.Handlers;
+using AdjustmentsLambda.Logging;
+using AdjustmentsLambda.Metrics;
+using Serilog;
 using System.Text.Json;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
@@ -8,25 +13,32 @@ namespace AdjustmentsLambda;
 
 public class Function
 {
-    public Task<APIGatewayProxyResponse> FunctionHandler(
+    private static readonly ILogger Logger = LogFactory.CreateLogger();
+    private static readonly ICloudWatchMetrics CloudWatchMetrics = new CloudWatchMetrics(
+        new AmazonCloudWatchClient(),
+        Logger,
+        Environment.GetEnvironmentVariable("METRICS_NAMESPACE") ?? "StockOps");
+    private static readonly StockAdjustmentHandler StockAdjustmentHandler = new(Logger, CloudWatchMetrics);
+
+    public async Task<APIGatewayProxyResponse> FunctionHandler(
         APIGatewayProxyRequest request,
         ILambdaContext context)
     {
         var requestId = GetRequestId(request, context);
 
-        /// TODO: Create a validation for new HEADER KEY
-        
         if (string.IsNullOrWhiteSpace(request.Body))
         {
-            return Task.FromResult(BadRequest("Body is required", requestId));
+            await CloudWatchMetrics.RecordValidationFailedAsync();
+            Logger
+                .ForContext("RequestId", requestId)
+                .Warning("Request validation failed: body is required");
+            return BadRequest("Body is required", requestId);
         }
 
         CreateAdjustmentRequest? body;
 
         try
-        {   
-            /// TODO: UPDATE THIS TO HANDLE ANOTHER MODEL
-            /// 
+        {
             body = JsonSerializer.Deserialize<CreateAdjustmentRequest>(
                 request.Body,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
@@ -34,32 +46,40 @@ public class Function
         }
         catch
         {
-            return Task.FromResult(BadRequest("Invalid JSON", requestId));
+            await CloudWatchMetrics.RecordValidationFailedAsync();
+            Logger
+                .ForContext("RequestId", requestId)
+                .Warning("Request validation failed: invalid JSON body");
+            return BadRequest("Invalid JSON", requestId);
         }
 
         if (body is null)
         {
-            return Task.FromResult(BadRequest("Invalid payload", requestId));
-        }
-        
-        /// TODO: CHANGE THIS TO FOLLOW THE NEW MODEL 
-        /// 
-        if (string.IsNullOrWhiteSpace(body.StoreId) ||
-            string.IsNullOrWhiteSpace(body.Sku))
-        {
-            return Task.FromResult(BadRequest("storeId and sku are required", requestId));
+            await CloudWatchMetrics.RecordValidationFailedAsync();
+            Logger
+                .ForContext("RequestId", requestId)
+                .Warning("Request validation failed: invalid payload");
+            return BadRequest("Invalid payload", requestId);
         }
 
-        Console.WriteLine(JsonSerializer.Serialize(new
+        try
         {
-            requestId,
-            storeId = body.StoreId,
-            sku = body.Sku,
-            deltaQty = body.DeltaQty
-        }));
+            var result = await StockAdjustmentHandler.HandleAsync(body, requestId);
 
-        // {success: true}
-        return Task.FromResult(Json(201, new { success = true }, requestId));
+            return Json(result.StatusCode, result.Body, requestId);
+        }
+        catch (Exception ex)
+        {
+            Logger
+                .ForContext("RequestId", requestId)
+                .ForContext("StoreId", body.StoreId)
+                .ForContext("Sku", body.Sku)
+                .ForContext("DeltaQty", body.DeltaQty)
+                .Error(ex, "Unhandled error while processing stock adjustment");
+
+            await CloudWatchMetrics.RecordSystemErrorAsync();
+            return Json(500, new ApiError("SYSTEM_ERROR", "Unexpected server error"), requestId);
+        }
     }
 
     /// Request ID Extraction Helper
@@ -114,16 +134,6 @@ public class Function
         return Json(400, new ApiError("VALIDATION", message), requestId);
     }
 
-    /// TODO: CREATE ANOTHER BAD REQUEST HELPER TYPE
-    /// 
-    /// 
-    // private static APIGatewayProxyResponse UserAccesDenied(
-    //     string message,
-    //     string requestId)
-    // {
-    //     return Json(400, new ApiError("----", message), requestId);
-    // }
-
     /// Json Response Helper
 
     private static APIGatewayProxyResponse Json(
@@ -145,20 +155,12 @@ public class Function
 }
 
 
-// Basic Models
-
-/// TODO: UPDATE THIS MODEL WITH YOUR OWN MODEL
 public record CreateAdjustmentRequest(
     string StoreId,
+    string Sku,
     int DeltaQty,
-    string? Reason,
-    string? PhotoKey
-)
-{
-    // TODO: FIX THIS MODEL TO MATCH THE POST BODY
-    //
-    public string? Sku { get; internal set; }
-}
-
+    string? Reason);
 
 public record ApiError(string Code, string Message);
+
+public record StockAdjustmentResult(int StatusCode, object Body);

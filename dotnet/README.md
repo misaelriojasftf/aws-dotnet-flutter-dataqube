@@ -1,131 +1,245 @@
-# Adjustments Lambda (.NET 8)
+# .NET Observability Lab — Serilog + AWS CloudWatch
 
-This folder contains an AWS Lambda function in C# (.NET 8) integrated with API Gateway HTTP API.
+## Overview
+This project demonstrates how to implement **structured logging** and **custom metrics** in a .NET Web API using:
 
-## Implemented behavior
+- Serilog for structured JSON logging
+- AWS CloudWatch Logs for centralized log storage
+- AWS CloudWatch Metrics for operational monitoring
+- CloudWatch Alarms for proactive incident detection
 
-- Route: `POST /adjustments`
-- Validation:
-  - body required
-  - valid JSON required
-  - `storeId` required
-  - `sku` required
-- Validation errors return `400` with:
+This lab helps developers build production-grade observability practices.
 
-```json
-{
-  "code": "VALIDATION",
-  "message": "error message"
-}
-```
+---
 
-- Success returns `201` with:
+## Learning Objectives
 
-```json
-{
-  "success": true
-}
-```
+By completing this lab, you will learn how to:
 
-- `X-Request-ID` handling:
-  - Uses request header `X-Request-ID` when present
-  - Falls back to `context.AwsRequestId`
-  - Always returns `X-Request-ID` in response headers
-- Structured JSON log written to CloudWatch:
+1. Implement structured JSON logging
+2. Emit custom metrics per business operation
+3. Monitor application health without manually inspecting logs
+4. Prepare basic alarms for error conditions
 
-```json
-{
-  "requestId": "...",
-  "storeId": "...",
-  "sku": "...",
-  "deltaQty": 0
-}
-```
+---
 
-## Project structure
+## Architecture
 
-- `src/AdjustmentsLambda/AdjustmentsLambda.csproj`
-- `src/AdjustmentsLambda/Function.cs`
-- `template.yaml` (SAM template)
+Client → .NET API → Serilog → CloudWatch Logs  
+                      ↘ Custom Metrics → CloudWatch Metrics → Alarms
+
+---
 
 ## Prerequisites
 
-1. AWS CLI configured (`aws configure`)
-2. SAM CLI installed
-3. .NET 8 SDK installed
+- .NET 8 SDK
+- AWS Account
+- AWS CLI configured
+- IAM permissions:
+  - CloudWatch Logs write access
+  - CloudWatch Metrics write access
 
-## Deploy step-by-step
+---
 
-1. Go to the project folder:
+## NuGet Packages
 
-```bash
-cd /Users/misa/Documents/GitHub/aws-dotnet-flutter-dataqube/dotnet
+Install required packages:
+
+```
+dotnet add package Serilog
+dotnet add package Serilog.Formatting.Compact
+dotnet add package AWSSDK.CloudWatch
+dotnet add package AWSSDK.CloudWatchLogs
 ```
 
-2. Build the Lambda:
+---
 
-```bash
-sam build
+## Structured Logging
+
+Structured logging records events as JSON objects instead of plain text.
+
+### Benefits
+
+- Filter logs by fields
+- Faster debugging
+- Better monitoring
+- Easier analytics
+
+### Log Fields
+
+Logs include:
+
+- RequestId
+- StoreId
+- Sku
+- DeltaQty
+- Reason
+
+### Example Log
+
+```json
+{
+  "RequestId": "abc-123",
+  "StoreId": "store-77",
+  "Sku": "SKU-1",
+  "Delta": 5,
+  "Reason": "Stock replenishment"
+}
 ```
 
-3. Deploy (guided first time):
+---
 
-```bash
-sam deploy --guided
+## Custom Metrics
+
+Metrics provide numerical monitoring of business operations.
+
+### Namespace
+
+```
+StockOps
 ```
 
-Use these values when prompted:
-- Stack Name: `adjustments-lambda-stack`
-- AWS Region: your target region (example `us-east-1`)
-- Confirm changes before deploy: `Y` or `N` (your preference)
-- Allow SAM CLI IAM role creation: `Y`
-- Save arguments to `samconfig.toml`: `Y`
+### Metrics
 
-4. Get endpoint URL:
+#### Successful Requests (HTTP 201)
 
-```bash
-aws cloudformation describe-stacks \
-  --stack-name adjustments-lambda-stack \
-  --query "Stacks[0].Outputs[?OutputKey=='HttpApiUrl'].OutputValue" \
-  --output text
+Metric Name: **AdjustmentsCreated**  
+Unit: Count
+
+#### Validation Failures (HTTP 400)
+
+Metric Name: **AdjustmentsValidationFailed**  
+Unit: Count
+
+#### System Errors (Exceptions)
+
+Metric Name: **AdjustmentsSystemError**  
+Unit: Count
+
+---
+
+## Project Structure
+
+```
+/Logging
+   LogFactory.cs
+
+/Metrics
+   CloudWatchMetrics.cs
+
+/Handlers
+   StockAdjustmentHandler.cs
 ```
 
-5. Test success request:
+---
 
-```bash
-curl -i -X POST "<HTTP_API_URL>" \
-  -H "Content-Type: application/json" \
-  -H "X-Request-ID: req-123" \
-  -d '{
-    "storeId": "S1",
-    "sku": "SKU123",
-    "deltaQty": 5,
-    "reason": "Stock correction",
-    "photoKey": null
-  }'
+## Running the Project
+
+### 1. Clone repository
+
+```
+git clone <repo-url>
+cd project
 ```
 
-Expected response:
-- status `201`
-- body `{"success":true}`
-- header `X-Request-ID: req-123`
+### 2. Configure AWS Credentials
 
-6. Test validation error (missing `sku`):
-
-```bash
-curl -i -X POST "<HTTP_API_URL>" \
-  -H "Content-Type: application/json" \
-  -d '{"storeId": "S1", "deltaQty": 5}'
+```
+aws configure
 ```
 
-Expected response:
-- status `400`
-- body like `{"code":"VALIDATION","message":"storeId and sku are required"}`
+### 3. Build project
 
-## CloudWatch logs
-
-To tail logs:
-
-```bash
-sam logs -n AdjustmentsFunction --stack-name adjustments-lambda-stack --tail
 ```
+dotnet build
+```
+
+### 4. Run API
+
+```
+dotnet run
+```
+
+---
+
+## Testing the Endpoint
+
+### Endpoint
+
+```
+POST /stock/adjust
+```
+
+### Example Request
+
+```json
+{
+  "storeId": "store-1",
+  "sku": "SKU-99",
+  "deltaQty": 10,
+  "reason": "Restock"
+}
+```
+
+---
+
+## Verifying Logs
+
+1. Open AWS Console
+2. Go to CloudWatch
+3. Select Log Groups
+4. Open application log group
+5. Filter logs using:
+
+```
+fields RequestId, StoreId, Sku
+| sort @timestamp desc
+```
+
+---
+
+## Verifying Metrics
+
+1. Open CloudWatch
+2. Go to Metrics
+3. Select namespace **StockOps**
+4. View metrics:
+   - AdjustmentsCreated
+   - AdjustmentsValidationFailed
+   - AdjustmentsSystemError
+
+---
+
+## Creating Alarms
+
+1. Open CloudWatch → Alarms
+2. Create Alarm
+3. Select metric **AdjustmentsSystemError**
+4. Set threshold (example: > 5 errors in 5 minutes)
+5. Configure notifications (SNS/email)
+
+---
+
+## Observability Best Practices
+
+- Always use structured logs
+- Include correlation IDs
+- Emit metrics for business events
+- Monitor error rates
+- Create alerts for abnormal behavior
+- Avoid logging sensitive data
+- Use dashboards for visualization
+
+---
+
+## Commit Message
+
+```
+feat: add structured logging and custom metrics with CloudWatch
+```
+
+---
+
+## License
+
+Educational use only.
