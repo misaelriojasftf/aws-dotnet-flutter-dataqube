@@ -1,2 +1,3 @@
 /dotnet/.aws-sam/build
-/dotnet/src/AdjustmentsLambda
+/dotnet/src/AdjustmentsLambda/bin
+/dotnet/src/AdjustmentsLambda/obj
