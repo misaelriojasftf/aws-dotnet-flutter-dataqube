@@ -9,6 +9,9 @@ public interface ICloudWatchMetrics
     Task RecordAdjustmentCreatedAsync();
     Task RecordValidationFailedAsync();
     Task RecordSystemErrorAsync();
+
+    // TODO: Create new event for metrics
+
 }
 
 public class CloudWatchMetrics : ICloudWatchMetrics
@@ -35,6 +38,8 @@ public class CloudWatchMetrics : ICloudWatchMetrics
 
     public Task RecordSystemErrorAsync() =>
         PutCountMetricAsync("AdjustmentsSystemError");
+
+    // TODO: Implement new event for metics 
 
     private async Task PutCountMetricAsync(string metricName)
     {

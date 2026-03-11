@@ -11,6 +11,25 @@ Parameters:
       - prod
       - stg
     Description: Deployment stage
+  DbHost:
+    Type: String
+    Description: RDS endpoint hostname
+  DbName:
+    Type: String
+    Default: stockops
+    Description: Database name
+  DbUser:
+    Type: String
+    Default: admin
+    Description: Database username
+  DbPassword:
+    Type: String
+    NoEcho: true
+    Description: Database password
+  DbPort:
+    Type: Number
+    Default: 3306
+    Description: Database port
 
 Resources:
   AdjustmentsFunction:
@@ -26,6 +45,11 @@ Resources:
       Environment:
         Variables:
           METRICS_NAMESPACE: StockOps
+          DB_HOST: !Ref DbHost
+          DB_NAME: !Ref DbName
+          DB_USER: !Ref DbUser
+          DB_PASSWORD: !Ref DbPassword
+          DB_PORT: !Ref DbPort
       Policies:
         - CloudWatchPutMetricPolicy: {}
       Events:
@@ -34,6 +58,11 @@ Resources:
           Properties:
             Path: /adjustments
             Method: POST
+        AdjustmentsGetByStore:
+          Type: HttpApi
+          Properties:
+            Path: /stores/{storeId}/adjustments
+            Method: GET
 
 Outputs:
   HttpApiUrl:
