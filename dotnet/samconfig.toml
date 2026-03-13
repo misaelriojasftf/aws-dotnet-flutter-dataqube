@@ -1,0 +1,13 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "sam-app"
+resolve_s3 = true
+s3_prefix = "sam-app"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Stage=\"stg\" DbSecretId=\"rds/stockops/app\""
+image_repositories = []
+confirm_changeset = true
+
+[default.global.parameters]
+region = "us-east-2"
