@@ -15,6 +15,7 @@ public class StockAdjustmentsQueryHandler
         _connectionFactory = connectionFactory;
     }
 
+    // TODO: add query to filter by sku
     public async Task<IReadOnlyList<object>> GetAdjustmentsAsync(
         string storeId,
         int limit,
