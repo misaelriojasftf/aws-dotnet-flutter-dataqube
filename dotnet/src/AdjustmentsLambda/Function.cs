@@ -25,16 +25,35 @@ public class Function
     private static readonly StockAdjustmentsQueryHandler StockAdjustmentsQueryHandler =
         new(Logger, RdsConnectionFactory);
 
-    public async Task<APIGatewayProxyResponse> FunctionHandler(
-        APIGatewayProxyRequest request,
+    public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(
+        APIGatewayHttpApiV2ProxyRequest request,
         ILambdaContext context)
     {
         var requestId = GetRequestId(request, context);
-        var httpMethod = request.HttpMethod ?? string.Empty;
-        var path = request.Path ?? string.Empty;
+        var httpMethod = request.RequestContext?.Http?.Method ?? string.Empty;
+        var path = NormalizePath(request);
+        var rawPath = request.RawPath ?? string.Empty;
+        var stage = request.RequestContext?.Stage ?? Environment.GetEnvironmentVariable("STAGE") ?? string.Empty;
+
+        Logger
+            .ForContext("RequestId", requestId)
+            .ForContext("HttpMethod", httpMethod)
+            .ForContext("RawPath", rawPath)
+            .ForContext("NormalizedPath", path)
+            .ForContext("Stage", stage)
+            .ForContext("HasPathParams", request.PathParameters is not null && request.PathParameters.Count > 0)
+            .ForContext("HasQueryParams", request.QueryStringParameters is not null && request.QueryStringParameters.Count > 0)
+            .Information("Incoming request");
 
         if (IsGetAdjustmentsRequest(request, httpMethod, path, out var storeId, out var limit))
         {
+            Logger
+                .ForContext("RequestId", requestId)
+                .ForContext("Route", "GET /stores/{storeId}/adjustments")
+                .ForContext("StoreId", storeId)
+                .ForContext("Limit", limit)
+                .Information("Route matched");
+
             if (string.IsNullOrWhiteSpace(storeId))
             {
                 await CloudWatchMetrics.RecordValidationFailedAsync();
@@ -63,8 +82,19 @@ public class Function
 
         if (!IsPostAdjustmentsRequest(httpMethod, path))
         {
+            Logger
+                .ForContext("RequestId", requestId)
+                .ForContext("Route", "POST /adjustments")
+                .ForContext("HttpMethod", httpMethod)
+                .ForContext("NormalizedPath", path)
+                .Information("Route not matched");
             return NotFound("Route not found", requestId);
         }
+
+        Logger
+            .ForContext("RequestId", requestId)
+            .ForContext("Route", "POST /adjustments")
+            .Information("Route matched");
 
         if (string.IsNullOrWhiteSpace(request.Body))
         {
@@ -124,7 +154,7 @@ public class Function
 
     /// Request ID Extraction Helper
     private static string GetRequestId(
-        APIGatewayProxyRequest request,
+        APIGatewayHttpApiV2ProxyRequest request,
         ILambdaContext context)
     {
         if (request.Headers is null)
@@ -167,14 +197,14 @@ public class Function
 
     /// Bad Request Helper
 
-    private static APIGatewayProxyResponse BadRequest(
+    private static APIGatewayHttpApiV2ProxyResponse BadRequest(
         string message,
         string requestId)
     {
         return Json(400, new ApiError("VALIDATION", message), requestId);
     }
 
-    private static APIGatewayProxyResponse NotFound(
+    private static APIGatewayHttpApiV2ProxyResponse NotFound(
         string message,
         string requestId)
     {
@@ -183,12 +213,20 @@ public class Function
 
     private static bool IsPostAdjustmentsRequest(string httpMethod, string path)
     {
-        return httpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
-               path.Equals("/adjustments", StringComparison.OrdinalIgnoreCase);
+        var matched = httpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
+                      path.EndsWith("/adjustments", StringComparison.OrdinalIgnoreCase);
+        if (!matched)
+        {
+            Logger
+                .ForContext("HttpMethod", httpMethod)
+                .ForContext("NormalizedPath", path)
+                .Debug("POST /adjustments not matched");
+        }
+        return matched;
     }
 
     private static bool IsGetAdjustmentsRequest(
-        APIGatewayProxyRequest request,
+        APIGatewayHttpApiV2ProxyRequest request,
         string httpMethod,
         string path,
         out string storeId,
@@ -199,6 +237,10 @@ public class Function
 
         if (!httpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase))
         {
+            Logger
+                .ForContext("HttpMethod", httpMethod)
+                .ForContext("NormalizedPath", path)
+                .Debug("GET /stores/{storeId}/adjustments not matched: method");
             return false;
         }
 
@@ -224,6 +266,16 @@ public class Function
             }
         }
 
+        if (string.IsNullOrWhiteSpace(storeId))
+        {
+            Logger
+                .ForContext("HttpMethod", httpMethod)
+                .ForContext("NormalizedPath", path)
+                .ForContext("RawPath", request.RawPath ?? string.Empty)
+                .ForContext("HasPathParams", request.PathParameters is not null && request.PathParameters.Count > 0)
+                .Debug("GET /stores/{storeId}/adjustments not matched: storeId missing");
+        }
+
         if (request.QueryStringParameters is not null &&
             request.QueryStringParameters.TryGetValue("limit", out var rawLimit) &&
             int.TryParse(rawLimit, out var parsedLimit) &&
@@ -234,14 +286,51 @@ public class Function
 
         return !string.IsNullOrWhiteSpace(storeId);
     }
+
+    private static string NormalizePath(APIGatewayHttpApiV2ProxyRequest request)
+    {
+        var path = request.RawPath ?? string.Empty;
+        var stage = request.RequestContext?.Stage;
+        if (string.IsNullOrWhiteSpace(stage))
+        {
+            stage = Environment.GetEnvironmentVariable("STAGE");
+        }
+
+        if (!string.IsNullOrWhiteSpace(stage))
+        {
+            var prefix = "/" + stage.Trim('/');
+            if (path.StartsWith(prefix + "/", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var trimmed = path.Substring(prefix.Length);
+                if (string.IsNullOrEmpty(trimmed))
+                {
+                    trimmed = "/";
+                }
+                return TrimTrailingSlash(trimmed);
+            }
+        }
+
+        return TrimTrailingSlash(path);
+    }
+
+    private static string TrimTrailingSlash(string path)
+    {
+        if (path.Length > 1 && path.EndsWith("/", StringComparison.Ordinal))
+        {
+            return path.TrimEnd('/');
+        }
+
+        return path;
+    }
     /// Json Response Helper
 
-    private static APIGatewayProxyResponse Json(
+    private static APIGatewayHttpApiV2ProxyResponse Json(
         int statusCode,
         object body,
         string requestId)
     {
-        return new APIGatewayProxyResponse
+        return new APIGatewayHttpApiV2ProxyResponse
         {
             StatusCode = statusCode,
             Body = JsonSerializer.Serialize(body),
