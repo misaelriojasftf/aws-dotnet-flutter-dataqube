@@ -1,5 +1,100 @@
 # .NET Observability Lab — Serilog + AWS CloudWatch
 
+## Session 17 — .NET + RDS (MySQL) (simplified, no VPC)
+
+### Learning Objectives
+1. Connect Lambda to RDS in a VPC.
+2. Connect to MySQL using environment variables.
+3. Implement `GET /stores/{storeId}/adjustments`.
+
+### Theory (20 min)
+- For a simplified lab, use a public RDS endpoint and keep Lambda outside a VPC.
+- Credentials are stored in AWS Secrets Manager and injected via secret id.
+
+### Demo (20 min)
+1. Create table `stock_adjustments`.
+2. Insert from Lambda.
+3. Read list by store.
+
+Table DDL:
+```sql
+CREATE TABLE IF NOT EXISTS stock_adjustments (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  store_id VARCHAR(64) NOT NULL,
+  sku VARCHAR(64) NOT NULL,
+  delta_qty INT NOT NULL,
+  reason VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Guided Lab (90 min)
+
+#### Checkpoint 1: Environment variables (20 min)
+Create the secret in AWS Secrets Manager:
+```
+aws secretsmanager create-secret \
+  --name rds/stockops1 \
+  --secret-string '{
+    "username": "admin",
+    "password": "StrongPassword123!",
+    "host": "db-stockops.ch46cgika5uh.us-east-2.rds.amazonaws.com",
+    "database": "stockops",
+    "port": 3306
+  }'
+```
+
+Set this environment variable in Lambda:
+```
+DB_SECRET_ID=rds/stockops1
+```
+
+#### Checkpoint 2: MySQL connection in .NET (40 min)
+Packages:
+```
+dotnet add package MySqlConnector
+dotnet add package AWSSDK.SecretsManager
+```
+
+Connection factory:
+```
+public class RdsConnectionFactory
+{
+    public async Task<MySqlConnection> CreateAsync()
+    {
+        var config = await DbConfig.FromSecretsManagerAsync(
+            Environment.GetEnvironmentVariable("DB_SECRET_ID"));
+        var cs = new MySqlConnectionStringBuilder
+        {
+            Server = config.Host,
+            Database = config.Database,
+            UserID = config.Username,
+            Password = config.Password,
+            Port = config.Port,
+            SslMode = MySqlSslMode.Required
+        }.ConnectionString;
+        var conn = new MySqlConnection(cs);
+        await conn.OpenAsync();
+        return conn;
+    }
+}
+```
+
+#### Checkpoint 3: Endpoint `GET /stores/{storeId}/adjustments` (30 min)
+```
+GET /stores/{storeId}/adjustments?limit=20
+```
+
+### Real Exercise (30 min)
+TODO for students:
+- Add index `(store_id, created_at)` if it does not exist.
+- Implement pagination with `created_at < lastSeen`.
+
+### Session Checklist
+- DB environment variables configured.
+- Lambda connects to RDS (public endpoint).
+- `GET /stores/{storeId}/adjustments` works.
+
 ## Overview
 This project demonstrates how to implement **structured logging** and **custom metrics** in a .NET Web API using:
 
@@ -35,6 +130,7 @@ Client → .NET API → Serilog → CloudWatch Logs
 - .NET 8 SDK
 - AWS Account
 - AWS CLI configured
+- RDS MySQL instance (public for lab)
 - IAM permissions:
   - CloudWatch Logs write access
   - CloudWatch Metrics write access
@@ -50,6 +146,8 @@ dotnet add package Serilog
 dotnet add package Serilog.Formatting.Compact
 dotnet add package AWSSDK.CloudWatch
 dotnet add package AWSSDK.CloudWatchLogs
+dotnet add package AWSSDK.SecretsManager
+dotnet add package MySqlConnector
 ```
 
 ---
@@ -154,7 +252,17 @@ aws configure
 dotnet build
 ```
 
-### 4. Run API
+### 4. Deploy with SAM (Lambda + API)
+
+```
+sam build
+sam deploy --guided \
+  --parameter-overrides \
+    Stage=stg \
+    DbSecretId=rds/stockops1
+```
+
+### 5. Run API locally (optional)
 
 ```
 dotnet run
@@ -167,7 +275,7 @@ dotnet run
 ### Endpoint
 
 ```
-POST /stock/adjust
+POST /adjustments
 ```
 
 ### Example Request
@@ -179,6 +287,38 @@ POST /stock/adjust
   "deltaQty": 10,
   "reason": "Restock"
 }
+```
+
+### Example cURL (replace `<domain>`)
+
+```
+curl -s -X POST "https://<domain>/adjustments" \
+  -H "Content-Type: application/json" \
+  -d '{"storeId":"store-1","sku":"SKU-99","deltaQty":10,"reason":"Restock"}'
+```
+
+```
+curl -s "https://<domain>/stores/store-1/adjustments?limit=20"
+```
+
+### Endpoint
+
+```
+GET /stores/{storeId}/adjustments?limit=20
+```
+
+### Example Response
+```json
+[
+  {
+    "id": 1,
+    "storeId": "store-1",
+    "sku": "SKU-99",
+    "deltaQty": 10,
+    "reason": "Restock",
+    "createdAt": "2026-03-11T08:45:00Z"
+  }
+]
 ```
 
 ---
