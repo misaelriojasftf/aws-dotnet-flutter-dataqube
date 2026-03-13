@@ -1,0 +1,52 @@
+name: Deploy .NET SAM
+
+on:
+  push:
+    # Triggers on pushes to main and on any tag. Other options include:
+    # - branches: [ "main", "release/*" ]
+    # - tags: [ "v*" ]
+    # - paths: [ "dotnet/**" ] (limit to specific paths)
+    branches:
+      - main
+    tags:
+      - "*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Setup SAM
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build
+        working-directory: dotnet
+        run: sam build
+
+      - name: Deploy
+        working-directory: dotnet
+        run: |
+          sam deploy \
+            --config-file samconfig.toml \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset
