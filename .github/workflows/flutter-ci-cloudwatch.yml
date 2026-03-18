@@ -1,0 +1,90 @@
+# The name of the workflow needs to be the following
+# [NAME] Flutter CI
+name: Flutter CI (CloudWatch)
+
+on:
+  push:
+    branches: [ "s6/l03/flutter-cicd-cloudwatch" ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  flutter-ci:
+    runs-on: ubuntu-latest
+
+    env:
+      FLUTTER_PROJECT_DIR: mobile
+      AWS_REGION: us-east-2
+      CW_LOG_GROUP: /github/flutter-ci
+
+    steps:
+      # 1️⃣ Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2️⃣ Setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      # 3️⃣ Install dependencies
+      - name: Flutter Pub Get
+        working-directory: ${{ env.FLUTTER_PROJECT_DIR }}
+        run: flutter pub get
+
+      # 4️⃣ Run Flutter Analyze and capture output
+      - name: Flutter Analyze
+        id: analyze
+        working-directory: ${{ env.FLUTTER_PROJECT_DIR }}
+        run: |
+          set -o pipefail
+          flutter analyze 2>&1 | tee ../flutter-analyze.log
+
+      # 5️⃣ Upload analyze log as artifact
+      - name: Upload analyze artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-analyze-log
+          path: flutter-analyze.log
+
+      # 6️⃣ Configure AWS credentials (IAM user keys)
+      - name: Configure AWS Credentials
+        if: always()
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 7️⃣ Push logs to CloudWatch
+      - name: Push analyze logs to CloudWatch
+        if: always()
+        run: |
+          set -euo pipefail
+
+          CW_STREAM="github-${{ github.workflow }}-${{ github.run_id }}-${{ github.run_attempt }}"
+          TIMESTAMP=$(date +%s000)
+
+          # Create log group if it does not exist
+          aws logs create-log-group \
+            --region "$AWS_REGION" \
+            --log-group-name "$CW_LOG_GROUP" || true
+
+          # Create log stream
+          aws logs create-log-stream \
+            --region "$AWS_REGION" \
+            --log-group-name "$CW_LOG_GROUP" \
+            --log-stream-name "$CW_STREAM" || true
+
+          # Convert log file to JSON-safe string
+          MSG=$(jq -Rs . < flutter-analyze.log)
+          EVENTS="[{\"timestamp\":${TIMESTAMP},\"message\":${MSG}}]"
+
+          # Send logs
+          aws logs put-log-events \
+            --region "$AWS_REGION" \
+            --log-group-name "$CW_LOG_GROUP" \
+            --log-stream-name "$CW_STREAM" \
+            --log-events "$EVENTS"
