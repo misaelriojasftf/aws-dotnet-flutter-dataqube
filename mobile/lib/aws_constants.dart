@@ -1,4 +1,3 @@
-/// Replace these values with your Amplify backend output.
 class AwsConstants {
   static const amplifyConfig = '''
 {
@@ -7,8 +6,8 @@ class AwsConstants {
       "awsAPIPlugin": {
         "dataqubeApi": {
           "endpointType": "REST",
-          "endpoint": "https://YOUR_API_ID.execute-api.YOUR_REGION.amazonaws.com/prod",
-          "region": "YOUR_REGION",
+          "endpoint": "https://at5tdtdik0.execute-api.us-east-2.amazonaws.com",
+          "region": "us-east-2",
           "authorizationType": "NONE"
         }
       }
@@ -19,4 +18,8 @@ class AwsConstants {
 
   static const lambdaApiName = 'dataqubeApi';
   static const lambdaPath = '/hello';
+  static const adjustmentsPath = '/adjustments';
+
+  static String adjustmentsByStorePath(String storeId) =>
+      '/stores/$storeId/adjustments';
 }
